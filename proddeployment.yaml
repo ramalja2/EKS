@@ -1,0 +1,199 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prod-deployment
+  namespace: prodns
+  labels:
+    app: web
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      apptype: web
+      env: prod
+  template:
+    metadata:
+      name: prodtemp
+      labels:
+        apptype: web
+        env: prod
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: apache
+          image: ramalja2/eks-basesite
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: prod-port
+              protocol: TCP
+              containerPort: 80
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prodsvc   #service name (it can be any name)
+  namespace: prodns
+spec:
+  ports:
+    - name: apache
+      port: 80 #service port
+      targetPort: 80 #container port Docker image
+      protocol: TCP
+  selector:     #mapping to pod
+    apptype: web
+    env: prod
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boxer-deployment
+  namespace: prodns
+  labels:
+    app: boxerweb
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      apptype: boxerweb
+      env: prod
+  template:
+    metadata:
+      name: boxertemp
+      labels:
+        apptype: boxerweb
+        env: prod
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: apache
+          image: ramalja2/eks-site1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: prod-port
+              protocol: TCP
+              containerPort: 80
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boxersvc   #service name (it can be any name)
+  namespace: prodns
+spec:
+  ports:
+    - name: apache
+      port: 80 #service port
+      targetPort: 80 #container port Docker image
+      protocol: TCP
+  selector:     #mapping to pod
+    apptype: boxerweb
+    env: prod
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skating-deployment
+  namespace: prodns
+  labels:
+    app: skatingweb
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      apptype: skatingweb
+      env: prod
+  template:
+    metadata:
+      name: skatingtemp
+      labels:
+        apptype: skatingweb
+        env: prod
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: apache
+          image: ramalja2/eks-site2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: prod-port
+              protocol: TCP
+              containerPort: 80
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skatingsvc   #service name (it can be any name)
+  namespace: prodns
+spec:
+  ports:
+    - name: apache
+      port: 80 #service port
+      targetPort: 80 #container port Docker image
+      protocol: TCP
+  selector:     #mapping to pod
+    apptype: skatingweb
+    env: prod
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prodingress
+  namespace: prodns
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "www.cloudonline.xyz"
+      http:
+        paths:
+          - path: "/"
+            pathType: "Prefix"
+            backend:
+              service:
+                name: prodsvc
+                port:
+                  number: 80
+          - path: "/boxing"
+            pathType: "Prefix"
+            backend:
+              service:
+                name: boxersvc
+                port:
+                  number: 80
+          - path: "/skating"
+            pathType: "Prefix"
+            backend:
+              service:
+                name: skatingsvc
+                port:
+                  number: 80

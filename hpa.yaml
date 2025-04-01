@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prod-deployment
+  namespace: prodns
+  labels:
+    app: web
+    env: prod
+spec:
+  selector:
+    matchLabels:
+      apptype: web
+      env: prod
+  template:
+    metadata:
+      name: prodtemp
+      labels:
+        apptype: web
+        env: prod
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: apache
+          image: ramalja2/eks-basesite
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: prod-port
+              protocol: TCP
+              containerPort: 80
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prodsvc   #service name (it can be any name)
+  namespace: prodns
+spec:
+  ports:
+    - name: apache
+      port: 80 #service port
+      targetPort: 80 #container port Docker image
+      protocol: TCP
+  selector:     #mapping to pod
+    apptype: web
+    env: prod
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boxersvc   #service name (it can be any name)
+  namespace: prodns
+spec:
+  ports:
+    - name: apache
+      port: 80 #service port
+      targetPort: 80 #container port Docker image
+      protocol: TCP
+  selector:     #mapping to pod
+    apptype: boxerweb
+    env: prod
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prodingress
+  namespace: prodns
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "www.cloudonline.xyz"
+      http:
+        paths:
+          - path: "/"
+            pathType: "Prefix"
+            backend:
+              service:
+                name: prodsvc
+                port:
+                  number: 80
+
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: prodhpa
+  namespace: prodns
+spec:
+  maxReplicas: 3
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: prod-deployment

@@ -1,0 +1,62 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: dbns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+      env: dev
+  template:
+    metadata:
+      name: webtemp
+      labels:
+        app: web
+        env: dev
+    spec:
+      containers:
+        - image: sudarshanlnx/twotier:latest
+          name: webcon
+          imagePullPolicy: Always
+          ports:
+            - name: tomcat
+              containerPort: 8080
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websvc
+  namespace: dbns
+spec:
+  ports:
+    - name: tomcat
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: web
+    env: dev
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webingress
+  namespace: dbns
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "www.cloudonline.xyz"
+      http:
+        paths:
+          - path: "/"
+            pathType: Prefix
+            backend:
+              service:
+                name: websvc
+                port:
+                  number: 80
